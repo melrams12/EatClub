@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EatClub Campaign Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d0d0d;color:#f0ede6;font-family:'Syne',sans-serif;min-height:100vh}
+  #root{min-height:100vh}
+  button{cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const {useState, useEffect, useRef} = React;
+
+const C = {
+  bg: '#0d0d0d', surface: '#161616', card: '#1c1c1c',
+  border: 'rgba(240,237,230,0.08)', accent: '#E8FF47',
+  accentDim: 'rgba(232,255,71,0.12)', red: '#E24B4A',
+  green: '#3DDC84', amber: '#FFB347', blue: '#5B9CF6',
+  text: '#f0ede6', muted: 'rgba(240,237,230,0.45)', faint: 'rgba(240,237,230,0.08)',
+};
+
+const KEYWORDS = [
+  { kw: 'EatClub legit',        sov: 72, sentiment: 'positive', trend: +14 },
+  { kw: 'EatClub review',       sov: 58, sentiment: 'positive', trend: +9  },
+  { kw: 'EatClub London',       sov: 61, sentiment: 'positive', trend: +11 },
+  { kw: 'EatClub scam',         sov: 49, sentiment: 'mixed',    trend: +6  },
+  { kw: 'EatClub worth it',     sov: 44, sentiment: 'mixed',    trend: +4  },
+  { kw: 'Restaurant deals UK',  sov: 35, sentiment: 'low',      trend: +2  },
+];
+
+const LOCATIONS = [
+  { city: 'London',     code: 'LN', status: 'live',       sentiment: 78, posts: 142, color: C.green },
+  { city: 'Manchester', code: 'MC', status: 'warming',    sentiment: 47, posts: 38,  color: C.amber },
+  { city: 'Liverpool',  code: 'LV', status: 'pre-launch', sentiment: 22, posts: 9,   color: C.muted },
+];
+
+const ACTIVITY = [
+  { type: 'win',    text: '12 persona comments defending "is EatClub legit?" on r/london',    meta: '+340 upvotes',  time: '2d ago'  },
+  { type: 'sov',   text: 'New SOV record on "EatClub review" — 72% share',                    meta: 'Up from 41%',   time: '5d ago'  },
+  { type: 'launch',text: 'Manchester subreddit seeding underway post Mar 10 launch',           meta: '8 threads',     time: 'Mar 12'  },
+  { type: 'win',   text: 'r/frugaluk "saved £40 on dinner" post hit subreddit front page',    meta: 'Organic reach', time: 'Mar 8'   },
+  { type: 'alert', text: '"Too good to be true" thread — counter-narrative deployed',          meta: 'Resolved 2hr',  time: 'Mar 3'   },
+];
+
+const TREND = {
+  labels:    ['Oct','Nov','Dec','Jan','Feb','Mar','Apr'],
+  sentiment: [33, 37, 42, 48, 53, 57, 58],
+  sov:       [23, 27, 31, 35, 38, 40, 41],
+};
+
+const CAMPAIGNS = [
+  { id: 1, name: 'Legitimacy defence',  keyword: 'EatClub legit',       status: 'complete', threads: 6,  sentiment: 72, sov: 72 },
+  { id: 2, name: 'Review amplification',keyword: 'EatClub review',      status: 'complete', threads: 5,  sentiment: 58, sov: 58 },
+  { id: 3, name: 'London awareness',    keyword: 'EatClub London',      status: 'active',   threads: 7,  sentiment: 61, sov: 61 },
+  { id: 4, name: 'Scam rebuttal',       keyword: 'EatClub scam',        status: 'active',   threads: 4,  sentiment: 49, sov: 49 },
+  { id: 5, name: 'Value proof',         keyword: 'EatClub worth it',    status: 'active',   threads: 3,  sentiment: 44, sov: 44 },
+  { id: 6, name: 'Deals discovery',     keyword: 'Restaurant deals UK', status: 'planned',  threads: 0,  sentiment: 35, sov: 35 },
+  { id: 7, name: 'Manchester launch',   keyword: 'EatClub Manchester',  status: 'planned',  threads: 0,  sentiment: null, sov: null },
+  { id: 8, name: 'Liverpool pre-seed',  keyword: 'EatClub Liverpool',   status: 'planned',  threads: 0,  sentiment: null, sov: null },
+];
+
+const CHECKLIST = [
+  { section: 'Access & accounts',   items: [
+    { label: 'Share target keywords list',             done: true  },
+    { label: 'Confirm UK city launch schedule',        done: true  },
+    { label: 'Brand tone-of-voice guidelines shared',  done: true  },
+    { label: 'Competitor Reddit presence reviewed',    done: false },
+  ]},
+  { section: 'Campaign setup',      items: [
+    { label: 'Baseline keyword audit complete',        done: true  },
+    { label: '8 campaign briefs drafted',              done: true  },
+    { label: 'Persona pool assigned to campaigns',     done: true  },
+    { label: 'Subreddit target list approved',         done: false },
+  ]},
+  { section: 'Reporting cadence',   items: [
+    { label: 'Weekly report template confirmed',       done: true  },
+    { label: 'Monthly review call scheduled',          done: false },
+    { label: 'KPI tracking sheet shared',              done: false },
+    { label: 'Escalation contact confirmed',           done: false },
+  ]},
+];
+
+function StatCard({ label, value, delta, sub, accent }) {
+  return React.createElement('div', {
+    style: {
+      background: accent ? C.accentDim : C.card,
+      border: `1px solid ${accent ? 'rgba(232,255,71,0.25)' : C.border}`,
+      borderRadius: 12, padding: '18px 20px',
+      display: 'flex', flexDirection: 'column', gap: 6,
+    }
+  },
+    React.createElement('div', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace" } }, label),
+    React.createElement('div', { style: { fontSize: 28, fontWeight: 800, color: accent ? C.accent : C.text, lineHeight: 1 } }, value),
+    delta && React.createElement('div', { style: { fontSize: 12, color: C.green, fontFamily: "'DM Mono',monospace" } }, delta),
+    sub   && React.createElement('div', { style: { fontSize: 11, color: C.muted } }, sub)
+  );
+}
+
+function SentimentPill({ s }) {
+  const map = { positive: [C.green,'rgba(61,220,132,0.15)'], mixed: [C.amber,'rgba(255,179,71,0.15)'], low: [C.muted,'rgba(240,237,230,0.06)'] };
+  const [col, bg] = map[s] || map.low;
+  return React.createElement('span', {
+    style: { fontSize: 10, padding: '3px 9px', borderRadius: 20, background: bg, color: col, fontFamily: "'DM Mono',monospace", letterSpacing: '0.04em' }
+  }, s);
+}
+
+function KeywordTable({ filter }) {
+  const rows = filter === 'all' ? KEYWORDS : KEYWORDS.filter(k => k.sentiment === filter);
+  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column' } },
+    rows.map((k, i) =>
+      React.createElement('div', {
+        key: k.kw,
+        style: {
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 0', gap: 12,
+          borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : 'none',
+        }
+      },
+        React.createElement('span', { style: { fontSize: 13, color: C.text, flex: 1 } }, k.kw),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+          React.createElement('div', { style: { width: 80, height: 4, background: C.faint, borderRadius: 2, overflow: 'hidden' } },
+            React.createElement('div', { style: { width: k.sov + '%', height: '100%', background: C.blue, borderRadius: 2 } })
+          ),
+          React.createElement('span', { style: { fontSize: 12, color: C.muted, fontFamily: "'DM Mono',monospace", minWidth: 44, textAlign: 'right' } }, k.sov + '%'),
+          React.createElement('span', { style: { fontSize: 11, color: C.green, fontFamily: "'DM Mono',monospace", minWidth: 32 } }, '+' + k.trend),
+          React.createElement(SentimentPill, { s: k.sentiment })
+        )
+      )
+    )
+  );
+}
+
+function TrendChart() {
+  const ref = useRef(null);
+  const chart = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (chart.current) chart.current.destroy();
+    chart.current = new Chart(ref.current, {
+      type: 'line',
+      data: {
+        labels: TREND.labels,
+        datasets: [
+          { label: 'Sentiment', data: TREND.sentiment, borderColor: C.accent, backgroundColor: 'rgba(232,255,71,0.06)', fill: true, tension: 0.45, pointRadius: 4, pointBackgroundColor: C.accent, pointBorderColor: C.bg, pointBorderWidth: 2 },
+          { label: 'SOV',       data: TREND.sov,       borderColor: C.blue,   backgroundColor: 'rgba(91,156,246,0.05)',  fill: true, tension: 0.45, pointRadius: 4, pointBackgroundColor: C.blue,   pointBorderColor: C.bg, pointBorderWidth: 2 },
+          { label: 'Baseline',  data: [33,33,33,33,33,33,33], borderColor: 'rgba(240,237,230,0.2)', borderDash: [5,5], borderWidth: 1, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: C.card, titleColor: C.muted, bodyColor: C.text, borderColor: C.border, borderWidth: 1, callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y + '%' } }
+        },
+        scales: {
+          x: { ticks: { color: C.muted, font: { size: 11, family: "'DM Mono',monospace" } }, grid: { color: C.faint }, border: { display: false } },
+          y: { min: 15, max: 75, ticks: { color: C.muted, callback: v => v + '%', font: { size: 11, family: "'DM Mono',monospace" } }, grid: { color: C.faint }, border: { display: false } }
+        }
+      }
+    });
+    return () => { if (chart.current) chart.current.destroy(); };
+  }, []);
+  return React.createElement('div', { style: { position: 'relative', width: '100%', height: 200 } },
+    React.createElement('canvas', { ref })
+  );
+}
+
+function ActivityDot({ type }) {
+  const col = { win: C.green, sov: C.blue, launch: C.amber, alert: C.red }[type] || C.muted;
+  return React.createElement('div', { style: { width: 8, height: 8, borderRadius: '50%', background: col, flexShrink: 0, marginTop: 5 } });
+}
+
+function App() {
+  const [kwFilter, setKwFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [checklist, setChecklist] = useState(CHECKLIST);
+  const tabs = ['overview', 'strategy', 'keywords', 'locations', 'activity', 'onboarding'];
+
+  const toggleItem = (si, ii) => {
+    setChecklist(prev => prev.map((s, sIdx) => sIdx !== si ? s : {
+      ...s, items: s.items.map((item, iIdx) => iIdx !== ii ? item : { ...item, done: !item.done })
+    }));
+  };
+
+  return React.createElement('div', { style: { maxWidth: 860, margin: '0 auto', padding: '28px 20px 60px' } },
+
+    // ── Header ──
+    React.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 16 } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 14 } },
+        React.createElement('div', { style: { width: 44, height: 44, borderRadius: 10, background: C.red, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: '#fff' } }, 'EC'),
+        React.createElement('div', null,
+          React.createElement('div', { style: { fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' } }, 'EatClub Reddit Campaign'),
+          React.createElement('div', { style: { fontSize: 12, color: C.muted, fontFamily: "'DM Mono',monospace", marginTop: 2 } }, 'Social proof · SOV · UK expansion')
+        )
+      ),
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+        React.createElement('div', { style: { width: 7, height: 7, borderRadius: '50%', background: C.green } }),
+        React.createElement('span', { style: { fontSize: 12, color: C.green, fontFamily: "'DM Mono',monospace" } }, 'LIVE'),
+        React.createElement('span', { style: { fontSize: 11, color: C.muted, marginLeft: 8 } }, 'Apr 2, 2026')
+      )
+    ),
+
+    // ── Tabs ──
+    React.createElement('div', { style: { display: 'flex', gap: 4, marginBottom: 28, borderBottom: `1px solid ${C.border}` } },
+      tabs.map(t =>
+        React.createElement('button', {
+          key: t,
+          onClick: () => setActiveTab(t),
+          style: {
+            background: 'none', border: 'none',
+            fontSize: 13, fontFamily: "'Syne',sans-serif", fontWeight: activeTab === t ? 700 : 400,
+            color: activeTab === t ? C.accent : C.muted,
+            padding: '8px 16px', borderBottom: activeTab === t ? `2px solid ${C.accent}` : '2px solid transparent',
+            marginBottom: -1, transition: 'color 0.2s', textTransform: 'capitalize',
+          }
+        }, t)
+      )
+    ),
+
+    // ── Overview ──
+    activeTab === 'overview' && React.createElement('div', null,
+      React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 24 } },
+        React.createElement(StatCard, { label: 'Reddit sentiment', value: '58%', delta: '+25pp from 33% baseline', accent: true }),
+        React.createElement(StatCard, { label: 'Share of voice',   value: '41%', delta: '+18pp vs. start' }),
+        React.createElement(StatCard, { label: 'Posts & comments', value: '284', delta: '+112 this month' }),
+        React.createElement(StatCard, { label: 'Personas active',  value: '70+', sub: 'Managed pool · live' }),
+      ),
+      React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 22px', marginBottom: 24 } },
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 } },
+          React.createElement('span', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace" } }, 'Sentiment trend · monthly'),
+          React.createElement('div', { style: { display: 'flex', gap: 16, fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace" } },
+            React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: 5 } }, React.createElement('span', { style: { width: 8, height: 8, borderRadius: 2, background: C.accent, display: 'inline-block' } }), 'Sentiment'),
+            React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: 5 } }, React.createElement('span', { style: { width: 8, height: 8, borderRadius: 2, background: C.blue,   display: 'inline-block' } }), 'SOV'),
+          )
+        ),
+        React.createElement(TrendChart)
+      ),
+      React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 22px' } },
+        React.createElement('div', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace", marginBottom: 14 } }, 'Overall sentiment · all keywords'),
+        React.createElement('div', { style: { display: 'flex', borderRadius: 6, overflow: 'hidden', height: 12, marginBottom: 12 } },
+          React.createElement('div', { style: { width: '58%', background: C.green } }),
+          React.createElement('div', { style: { width: '22%', background: 'rgba(240,237,230,0.2)' } }),
+          React.createElement('div', { style: { width: '20%', background: C.red } }),
+        ),
+        React.createElement('div', { style: { display: 'flex', gap: 20, fontSize: 12, color: C.muted, fontFamily: "'DM Mono',monospace" } },
+          React.createElement('span', null, React.createElement('span', { style: { color: C.green } }, '● '), 'Positive 58%'),
+          React.createElement('span', null, React.createElement('span', { style: { color: 'rgba(240,237,230,0.4)' } }, '● '), 'Neutral 22%'),
+          React.createElement('span', null, React.createElement('span', { style: { color: C.red } }, '● '), 'Negative 20%'),
+        )
+      )
+    ),
+
+    // ── Strategy ──
+    activeTab === 'strategy' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+
+      // Goal banner
+      React.createElement('div', { style: { background: C.accentDim, border: `1px solid rgba(232,255,71,0.2)`, borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'flex-start' } },
+        React.createElement('div', { style: { fontSize: 22 } }, '🎯'),
+        React.createElement('div', null,
+          React.createElement('div', { style: { fontSize: 11, color: C.accent, fontFamily: "'DM Mono',monospace", letterSpacing: '0.06em', marginBottom: 5 } }, 'CAMPAIGN GOAL'),
+          React.createElement('div', { style: { fontSize: 14, color: C.text, lineHeight: 1.6 } }, 'Improve sentiment & share of voice on target keywords to drive EatClub sign-ups from Reddit across UK city launches.')
+        )
+      ),
+
+      // Cycle overview
+      React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 22px' } },
+        React.createElement('div', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace", marginBottom: 16 } }, 'Cycle 1 · 8 campaigns'),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 } },
+          [['Complete','complete',C.green,CAMPAIGNS.filter(c=>c.status==='complete').length],
+           ['Active','active',C.amber,CAMPAIGNS.filter(c=>c.status==='active').length],
+           ['Planned','planned',C.muted,CAMPAIGNS.filter(c=>c.status==='planned').length]
+          ].map(([label,_,color,count]) =>
+            React.createElement('div', { key: label, style: { background: C.surface, borderRadius: 8, padding: '12px 14px' } },
+              React.createElement('div', { style: { fontSize: 22, fontWeight: 800, color } }, count),
+              React.createElement('div', { style: { fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace" } }, label)
+            )
+          )
+        ),
+        CAMPAIGNS.map((cp, i) => {
+          const statusColor = { complete: C.green, active: C.amber, planned: C.muted }[cp.status];
+          return React.createElement('div', {
+            key: cp.id,
+            style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: i < CAMPAIGNS.length-1 ? `1px solid ${C.border}` : 'none' }
+          },
+            React.createElement('span', { style: { fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace", minWidth: 20 } }, cp.id),
+            React.createElement('div', { style: { flex: 1 } },
+              React.createElement('div', { style: { fontSize: 13, color: C.text } }, cp.name),
+              React.createElement('div', { style: { fontSize: 11, color: C.muted, marginTop: 1 } }, cp.keyword)
+            ),
+            cp.threads > 0 && React.createElement('span', { style: { fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace" } }, cp.threads + ' threads'),
+            cp.sentiment && React.createElement('span', { style: { fontSize: 11, color: C.blue, fontFamily: "'DM Mono',monospace", minWidth: 48, textAlign: 'right' } }, cp.sentiment + '% sent.'),
+            React.createElement('span', { style: { fontSize: 10, padding: '2px 9px', borderRadius: 20, background: statusColor + '22', color: statusColor, fontFamily: "'DM Mono',monospace", minWidth: 64, textAlign: 'center' } }, cp.status)
+          );
+        })
+      ),
+
+      // Per-campaign flow
+      React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 22px' } },
+        React.createElement('div', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace", marginBottom: 16 } }, 'Per-campaign process'),
+        React.createElement('div', { style: { display: 'flex', gap: 0, alignItems: 'stretch', flexWrap: 'wrap' } },
+          [['Seed', 'Post threads on target subreddits'],
+           ['Track', 'Monitor sentiment, SOV & ranking'],
+           ['Report', 'Weekly results digest'],
+           ['Review', 'Monthly call + new targets']
+          ].map(([title, desc], i, arr) =>
+            React.createElement('div', { key: title, style: { flex: 1, minWidth: 120, display: 'flex', alignItems: 'center', gap: 0 } },
+              React.createElement('div', { style: { flex: 1, background: C.surface, borderRadius: 8, padding: '14px 14px', textAlign: 'center' } },
+                React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.accent, marginBottom: 6 } }, title),
+                React.createElement('div', { style: { fontSize: 11, color: C.muted, lineHeight: 1.5 } }, desc)
+              ),
+              i < arr.length - 1 && React.createElement('div', { style: { fontSize: 16, color: C.muted, padding: '0 6px', flexShrink: 0 } }, '→')
+            )
+          )
+        )
+      ),
+
+      // Reddit map
+      React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 22px' } },
+        React.createElement('div', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace", marginBottom: 14 } }, 'Reddit content map'),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+          [
+            { icon: '🌱', label: 'Thread seeding', desc: 'Post natural threads monthly targeting EatClub keywords in relevant subreddits' },
+            { icon: '👥', label: 'Persona endorsements', desc: 'Positive EatClub mentions from managed accounts in organic, non-spammy tone' },
+            { icon: '📊', label: 'Rank monitoring', desc: 'Track each thread\'s ranking, upvotes, and sentiment score weekly' },
+            { icon: '🛡', label: 'Counter-narrative', desc: 'Respond to negative threads quickly — neutralise "too good to be true" objections' },
+          ].map(({ icon, label, desc }) =>
+            React.createElement('div', { key: label, style: { background: C.surface, borderRadius: 8, padding: '14px 16px', display: 'flex', gap: 12 } },
+              React.createElement('span', { style: { fontSize: 20, flexShrink: 0 } }, icon),
+              React.createElement('div', null,
+                React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 } }, label),
+                React.createElement('div', { style: { fontSize: 12, color: C.muted, lineHeight: 1.5 } }, desc)
+              )
+            )
+          )
+        )
+      ),
+
+      // Weekly reporting KPIs
+      React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 22px' } },
+        React.createElement('div', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace", marginBottom: 14 } }, 'Weekly report · tracked metrics'),
+        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+          [
+            { kpi: '% Sentiment on target keywords', current: '58%', baseline: '33%', color: C.green },
+            { kpi: '# Mentions on target keywords',  current: '284', baseline: '—',   color: C.blue  },
+            { kpi: '# Threads seeded this cycle',    current: '25',  baseline: '—',   color: C.amber },
+            { kpi: 'Share of voice (SOV)',            current: '41%', baseline: '23%', color: C.accent },
+          ].map(({ kpi, current, baseline, color }) =>
+            React.createElement('div', { key: kpi, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: `1px solid ${C.border}` } },
+              React.createElement('span', { style: { fontSize: 13, color: C.text, flex: 1 } }, kpi),
+              baseline !== '—' && React.createElement('span', { style: { fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace" } }, 'baseline ' + baseline),
+              React.createElement('span', { style: { fontSize: 15, fontWeight: 700, color, fontFamily: "'DM Mono',monospace", minWidth: 44, textAlign: 'right' } }, current)
+            )
+          )
+        )
+      )
+    ),
+
+    // ── Onboarding ──
+    activeTab === 'onboarding' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 } },
+        React.createElement('span', { style: { fontSize: 13, color: C.muted } },
+          (() => {
+            const total = checklist.reduce((a,s) => a + s.items.length, 0);
+            const done  = checklist.reduce((a,s) => a + s.items.filter(i=>i.done).length, 0);
+            return done + ' of ' + total + ' items complete';
+          })()
+        ),
+        React.createElement('div', { style: { height: 6, width: 180, background: C.faint, borderRadius: 3, overflow: 'hidden' } },
+          React.createElement('div', { style: {
+            height: '100%', background: C.accent, borderRadius: 3,
+            width: (() => {
+              const total = checklist.reduce((a,s) => a + s.items.length, 0);
+              const done  = checklist.reduce((a,s) => a + s.items.filter(i=>i.done).length, 0);
+              return Math.round(done/total*100) + '%';
+            })()
+          }})
+        )
+      ),
+      checklist.map((section, si) =>
+        React.createElement('div', { key: section.section, style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px' } },
+          React.createElement('div', { style: { fontSize: 11, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'DM Mono',monospace", marginBottom: 12 } }, section.section),
+          section.items.map((item, ii) =>
+            React.createElement('div', {
+              key: item.label,
+              onClick: () => toggleItem(si, ii),
+              style: {
+                display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0',
+                borderBottom: ii < section.items.length-1 ? `1px solid ${C.border}` : 'none',
+                cursor: 'pointer',
+              }
+            },
+              React.createElement('div', {
+                style: {
+                  width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                  border: item.done ? 'none' : `1.5px solid ${C.muted}`,
+                  background: item.done ? C.accent : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s',
+                }
+              }, item.done && React.createElement('span', { style: { fontSize: 11, color: C.bg, fontWeight: 800 } }, '✓')),
+              React.createElement('span', { style: { fontSize: 13, color: item.done ? C.muted : C.text, textDecoration: item.done ? 'line-through' : 'none', transition: 'all 0.15s' } }, item.label)
+            )
+          )
+        )
+      )
+    ),
+
+
+    activeTab === 'keywords' && React.createElement('div', null,
+      React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' } },
+        ['all','positive','mixed','low'].map(f =>
+          React.createElement('button', {
+            key: f,
+            onClick: () => setKwFilter(f),
+            style: {
+              background: kwFilter === f ? C.accent : C.card,
+              color: kwFilter === f ? C.bg : C.muted,
+              border: `1px solid ${kwFilter === f ? C.accent : C.border}`,
+              borderRadius: 20, padding: '5px 14px', fontSize: 12,
+              fontFamily: "'Syne',sans-serif", fontWeight: 600,
+              textTransform: 'capitalize', transition: 'all 0.15s',
+            }
+          }, f)
+        )
+      ),
+      React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px' } },
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 20, marginBottom: 10, fontSize: 10, color: C.muted, fontFamily: "'DM Mono',monospace", letterSpacing: '0.06em' } },
+          React.createElement('span', null, 'SOV BAR'),
+          React.createElement('span', null, 'SOV %'),
+          React.createElement('span', null, 'TREND'),
+          React.createElement('span', null, 'SENTIMENT'),
+        ),
+        React.createElement(KeywordTable, { filter: kwFilter })
+      )
+    ),
+
+    // ── Locations ──
+    activeTab === 'locations' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      LOCATIONS.map(loc =>
+        React.createElement('div', {
+          key: loc.city,
+          style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }
+        },
+          React.createElement('div', {
+            style: { width: 44, height: 44, borderRadius: '50%', background: loc.status === 'live' ? 'rgba(61,220,132,0.15)' : loc.status === 'warming' ? 'rgba(255,179,71,0.12)' : C.faint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: loc.color, flexShrink: 0 }
+          }, loc.code),
+          React.createElement('div', { style: { flex: 1, minWidth: 120 } },
+            React.createElement('div', { style: { fontSize: 15, fontWeight: 700 } }, loc.city),
+            React.createElement('div', { style: { fontSize: 11, color: C.muted, marginTop: 2 } },
+              loc.status === 'live' ? 'Live · Reddit coverage active' : loc.status === 'warming' ? 'Launched Mar 10 · warming up' : 'Upcoming · pre-seeding in progress'
+            ),
+            React.createElement('div', { style: { marginTop: 8, height: 5, background: C.faint, borderRadius: 3, overflow: 'hidden' } },
+              React.createElement('div', { style: { width: loc.sentiment + '%', height: '100%', background: loc.color, borderRadius: 3 } })
+            )
+          ),
+          React.createElement('div', { style: { textAlign: 'right' } },
+            React.createElement('div', { style: { fontSize: 22, fontWeight: 800, color: loc.color } }, loc.sentiment + '%'),
+            React.createElement('div', { style: { fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace" } }, 'positive'),
+          ),
+          React.createElement('div', { style: { textAlign: 'right', minWidth: 60 } },
+            React.createElement('div', { style: { fontSize: 22, fontWeight: 800 } }, loc.posts),
+            React.createElement('div', { style: { fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace" } }, 'posts'),
+          )
+        )
+      ),
+      React.createElement('div', { style: { background: C.accentDim, border: `1px solid rgba(232,255,71,0.2)`, borderRadius: 12, padding: '16px 20px', marginTop: 8 } },
+        React.createElement('div', { style: { fontSize: 11, color: C.accent, fontFamily: "'DM Mono',monospace", letterSpacing: '0.06em', marginBottom: 10 } }, 'WHY OGTOOL · KEY REASONS'),
+        ['70+ managed personas — no brand risk', 'Full strategy ownership & fast execution', 'Reddit expertise per city launch', 'Scales without waiting years to build karma'].map(r =>
+          React.createElement('div', { key: r, style: { display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 7, fontSize: 13 } },
+            React.createElement('span', { style: { color: C.accent, flexShrink: 0 } }, '✓'),
+            React.createElement('span', { style: { color: C.text } }, r)
+          )
+        )
+      )
+    ),
+
+    // ── Activity ──
+    activeTab === 'activity' && React.createElement('div', { style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 22px' } },
+      ACTIVITY.map((a, i) =>
+        React.createElement('div', {
+          key: i,
+          style: { display: 'flex', gap: 14, alignItems: 'flex-start', padding: '14px 0', borderBottom: i < ACTIVITY.length - 1 ? `1px solid ${C.border}` : 'none' }
+        },
+          React.createElement(ActivityDot, { type: a.type }),
+          React.createElement('div', { style: { flex: 1 } },
+            React.createElement('div', { style: { fontSize: 13, color: C.text, lineHeight: 1.5 } }, a.text),
+            React.createElement('div', { style: { display: 'flex', gap: 12, marginTop: 5 } },
+              React.createElement('span', { style: { fontSize: 11, color: C.accent, fontFamily: "'DM Mono',monospace" } }, a.meta),
+              React.createElement('span', { style: { fontSize: 11, color: C.muted,  fontFamily: "'DM Mono',monospace" } }, a.time),
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.render(React.createElement(App), document.getElementById('root'));
+</script>
+</body>
+</html>
